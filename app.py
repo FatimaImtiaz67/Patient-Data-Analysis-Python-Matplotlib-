@@ -1,72 +1,140 @@
-import streamlit as st
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-import plotly.express as px
+import seaborn as sns
 from wordcloud import WordCloud
 import numpy as np
 
-# Load the data
-@st.cache_data
-def load_data():
-    df = pd.read_csv('hospital_data.csv')
-    df.columns = df.columns.str.strip().str.lower()
-    df['visit_date'] = pd.to_datetime(np.random.choice(
-        pd.date_range('2022-01-01', '2023-12-31'), size=len(df)))
-    df['month'] = df['visit_date'].dt.month
-    df['season'] = df['visit_date'].dt.month % 12 // 3 + 1
-    season_map = {1: 'Winter', 2: 'Spring', 3: 'Summer', 4: 'Fall'}
-    df['season'] = df['season'].map(season_map)
-    return df
 
-df = load_data()
+# For better visuals
+sns.set(style='whitegrid')
+plt.rcParams['figure.figsize'] = (10, 6)
 
-st.title("🧑‍⚕️ Patient Data Analysis Dashboard")
-st.markdown("Built with **Streamlit**, **Matplotlib**, **Seaborn**, and **Plotly**")
+# Load the dataset
+df = pd.read_csv('hospital data analysis.csv')
 
-# Sidebar filter
-st.sidebar.header("Filters")
-selected_gender = st.sidebar.selectbox("Select Gender", options=['All'] + list(df['gender'].unique()))
-if selected_gender != 'All':
-    df = df[df['gender'] == selected_gender]
+# Check basic info
+print(df.info())
 
-# Age Distribution
-st.subheader("Age Distribution")
-fig1, ax1 = plt.subplots()
-sns.histplot(df['age'], kde=True, bins=20, color='skyblue', ax=ax1)
-st.pyplot(fig1)
+# Preview first few rows
+df.head()
 
-# Gender Pie Chart
-st.subheader("Gender Distribution")
-gender_counts = df['gender'].value_counts()
-fig2, ax2 = plt.subplots()
-ax2.pie(gender_counts, labels=gender_counts.index, autopct='%1.1f%%', startangle=90, colors=['lightcoral', 'lightblue'])
-ax2.axis('equal')
-st.pyplot(fig2)
+sns.histplot(data=df, x='Age', bins=20, kde=True, color='skyblue')
+plt.title('Age Distribution of Patients')
+plt.xlabel('Age')
+plt.ylabel('Number of Patients')
+plt.show()
 
-# Top Conditions
-st.subheader("Top Diagnosed Conditions")
-top_conditions = df['condition'].value_counts().head(10)
-st.bar_chart(top_conditions)
+# Pie Chart
+gender_counts = df['Gender'].value_counts()
+gender_counts.plot.pie(autopct='%1.1f%%', startangle=90, colors=['lightcoral', 'skyblue'])
+plt.title('Gender Distribution')
+plt.ylabel('')  # Remove y-axis label
+plt.show()
 
-# Word Cloud
-st.subheader("Word Cloud of Conditions")
-text = ' '.join(df['condition'].dropna())
-wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
-fig3, ax3 = plt.subplots()
-ax3.imshow(wordcloud, interpolation='bilinear')
-ax3.axis('off')
-st.pyplot(fig3)
+# Bar Chart
+sns.countplot(data=df, x='Gender', palette='pastel')
+plt.title('Gender Count')
+plt.xlabel('Gender')
+plt.ylabel('Number of Patients')
+plt.show()
 
-# Cost Distribution
-st.subheader("Treatment Cost Distribution")
-fig4, ax4 = plt.subplots()
-sns.boxplot(x=df['cost'], color='orange', ax=ax4)
-st.pyplot(fig4)
+# Count of visits by procedure
+procedure_counts = df['Procedure'].value_counts().head(10)  # Top 10 procedures
+sns.barplot(x=procedure_counts.values, y=procedure_counts.index, palette='Blues_r')
+plt.title('Top 10 Procedures by Patient Visits')
+plt.xlabel('Number of Patients')
+plt.ylabel('Procedure')
+plt.show()
 
-# Monthly Visit Trend (Plotly)
-st.subheader("Monthly Visit Trend")
-df['month_str'] = df['visit_date'].dt.to_period('M').astype(str)
-monthly_visits = df['month_str'].value_counts().sort_index()
-fig5 = px.line(x=monthly_visits.index, y=monthly_visits.values, labels={'x': 'Month', 'y': 'Number of Visits'})
-st.plotly_chart(fig5)
+condition_counts = df['Condition'].value_counts().head(10)
+sns.barplot(x=condition_counts.values, y=condition_counts.index, palette='Greens_r')
+plt.title('Top 10 Diagnosed Conditions')
+plt.xlabel('Number of Patients')
+plt.ylabel('Condition')
+plt.show()
+
+
+text = " ".join(str(cond) for cond in df['Condition'].dropna())
+wordcloud = WordCloud(width=800, height=400, background_color='white', colormap='viridis').generate(text)
+
+plt.figure(figsize=(12, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Word Cloud of Diagnosed Conditions')
+plt.show()
+
+
+# Generate random dates between Jan 2022 and Dec 2023
+df['visit_date'] = pd.to_datetime(np.random.choice(pd.date_range('2022-01-01', '2023-12-31'), size=len(df)))
+
+# Preview
+df[['Patient_ID', 'visit_date']].head()
+# Histogram of cost
+sns.histplot(df['Cost'], bins=30, color='orange', kde=True)
+plt.title('Distribution of Treatment Costs')
+plt.xlabel('Cost')
+plt.ylabel('Number of Patients')
+plt.show()
+
+# Box plot
+sns.boxplot(x=df['Cost'], color='lightgreen')
+plt.title('Treatment Cost Distribution (Box Plot)')
+plt.xlabel('Cost')
+plt.show()
+
+avg_cost_by_procedure = df.groupby('Procedure')['Cost'].mean().sort_values(ascending=False).head(10)
+
+sns.barplot(x=avg_cost_by_procedure.values, y=avg_cost_by_procedure.index, palette='coolwarm')
+plt.title('Average Cost per Procedure (Top 10)')
+plt.xlabel('Average Cost')
+plt.ylabel('Procedure')
+plt.show()
+
+avg_cost_by_condition = df.groupby('Condition')['Cost'].mean().sort_values(ascending=False).head(10)
+
+sns.barplot(x=avg_cost_by_condition.values, y=avg_cost_by_condition.index, palette='magma')
+plt.title('Average Cost per Condition (Top 10)')
+plt.xlabel('Average Cost')
+plt.ylabel('Condition')
+plt.show()
+
+
+# Generate random visit dates between Jan 2022 and Dec 2023
+df['visit_date'] = pd.to_datetime(np.random.choice(pd.date_range('2022-01-01', '2023-12-31'), size=len(df)))
+
+# Extract month and season from visit_date
+df['month'] = df['visit_date'].dt.month
+df['month_name'] = df['visit_date'].dt.strftime('%B')
+df['season'] = df['visit_date'].dt.month % 12 // 3 + 1  # Maps months to 1-4
+
+season_map = {1: 'Winter', 2: 'Spring', 3: 'Summer', 4: 'Fall'}
+df['season'] = df['season'].map(season_map)
+
+# Count of conditions per season
+season_condition = df.groupby(['season', 'Condition']).size().unstack().fillna(0)
+
+season_condition.T.plot(kind='line', figsize=(12, 6))
+plt.title('Illness Trends by Season')
+plt.xlabel('Condition')
+plt.ylabel('Number of Cases')
+plt.legend(title='Season')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+monthly_visits = df['visit_date'].dt.to_period('M').value_counts().sort_index()
+
+monthly_visits.plot(kind='line', marker='o', color='teal')
+plt.title('Patient Visit Trends Over Time')
+plt.xlabel('Month')
+plt.ylabel('Number of Visits')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Correlation heatmap of numerical columns
+numeric_cols = df.select_dtypes(include='number')
+
+sns.heatmap(numeric_cols.corr(), annot=True, cmap='coolwarm', fmt='.2f')
+plt.title('Correlation Heatmap')
+plt.show()
